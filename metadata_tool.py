@@ -1,36 +1,57 @@
 from PIL import Image
 from PIL.ExifTags import TAGS
+from datetime import datetime
 
 
 def extract_metadata(image_path):
     try:
-        # Open the image file
         image = Image.open(image_path)
+        exif_data = image.getexif()  # Using the public function
 
-        # Extract the raw EXIF data
-        exif_data = image._getexif()
+        # Prepare a list to store our lines of text
+        report_lines = []
 
-        if exif_data is None:
-            print("No metadata found in this image.")
+        # Add a header with the current time of investigation
+        investigation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        report_lines.append(f"--- DIGITAL FORENSIC REPORT ---")
+        report_lines.append(f"Target File: {image_path}")
+        report_lines.append(f"Investigation Date: {investigation_time}")
+        report_lines.append("-" * 30)
+
+        if not exif_data:
+            print("No metadata found.")
             return
 
-        print(f"--- Metadata for: {image_path} ---")
+        print(f"--- Analyzing {image_path}... ---")
 
-        # Loop through the raw data and decode it
-        for tag_id, value in exif_data.items():
-            # Get the human-readable name of the tag (e.g., "DateTime", "Model")
+        for tag_id in exif_data:
             tag_name = TAGS.get(tag_id, tag_id)
+            value = exif_data.get(tag_id)
 
-            # Print the Tag Name and the Value
-            print(f"{tag_name:25}: {value}")
+            # Create a line of text
+            line = f"{tag_name:25}: {value}"
 
-    except IOError:
-        print("Error: The file could not be opened. Check the path.")
+            # Print to screen
+            print(line)
+
+            # Add to our report list
+            report_lines.append(line)
+
+        # --- SAVE TO FILE FEATURE ---
+        # This is what makes it a real tool. We save the evidence.
+        report_filename = f"report_{image_path}.txt"
+        with open(report_filename, "w") as f:
+            f.write("\n".join(report_lines))
+
+        print("-" * 30)
+        print(f"✅ SUCCESS: Evidence saved to '{report_filename}'")
+
+    except FileNotFoundError:
+        print(f"Error: The file '{image_path}' was not found. Did you forget the .jpg?")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
-# --- HOW TO USE ---
-# Replace 'test_image.jpg' with the name of a real photo on your computer
-# Note: Photos downloaded from WhatsApp/Facebook usually have metadata stripped out for privacy.
-# Use a photo taken directly from your phone camera for the best results.
+# --- MAIN ---
 file_name = input("Enter the image file name (e.g., photo.jpg): ")
 extract_metadata(file_name)
